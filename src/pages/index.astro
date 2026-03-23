@@ -9,6 +9,13 @@ const temp = Astro.url.searchParams.get('temp') || 'celsius';
 const wind_speed = Astro.url.searchParams.get('wind_speed') || 'kmh';
 const precipitation = Astro.url.searchParams.get('precipitation') || 'mm';
 
+let preset = "metric"
+if (temp != "celsius" && wind_speed != "kmh" && precipitation != "mm") {
+	preset = "imperial"
+}
+
+
+//Obetener las cordenadas
 async function getCoordinates(cityName: string) {
     // API de búsqueda de Open-Meteo
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=es&format=json`;
@@ -30,7 +37,6 @@ async function getCoordinates(cityName: string) {
         longitude: city.longitude
     };
 }
-
 const ciudad = await getCoordinates("Brunete")
 
 const params = {
@@ -39,6 +45,9 @@ const params = {
 	daily: ["temperature_2m_max", "temperature_2m_min", "weather_code"],
 	hourly: ["temperature_2m", "weather_code"],
 	current: ["temperature_2m", "apparent_temperature", "precipitation", "weather_code", "relative_humidity_2m", "wind_speed_10m"],
+	wind_speed_unit: wind_speed,
+	temperature_unit: temp,
+	precipitation_unit: precipitation,
 };
 const url = "https://api.open-meteo.com/v1/forecast";
 const responses = await fetchWeatherApi(url, params);
@@ -100,10 +109,10 @@ const weatherData = {
 
 				<!-- MENU DE UNIDADES -->
 				<div id="dropdown-menu" class="hidden w-60 absolute right-0 mt-2 rounded-xl bg-neutral-800 shadow-lg border border-neutral-600 z-10 overflow-hidden">
-					<button class="w-56 m-2 text-left px-4 py-3 text-lg rounded-xl text-white hover:bg-neutral-600/50">
-						Switch to Imperial
+					<button id="switch-preset-btn" class={`w-56 m-2 text-left px-4 py-3 text-lg rounded-xl text-white hover:bg-neutral-600/50 ${preset}`}>
+						{preset === "metric" ? "Switch to Imperial" : "Switch to Metric"}
 					</button>
-					<HeaderSettings selected={temp} id="temp" title="Temperature" opt1="Celsius (ºC)" opt2="Fahrenheit (ºF)" opt1_id="celsius" opt2_id="farenheit"/>
+					<HeaderSettings selected={temp} id="temp" title="Temperature" opt1="Celsius (ºC)" opt2="Fahrenheit (ºF)" opt1_id="celsius" opt2_id="fahrenheit"/>
 					<HeaderSettings selected={wind_speed} id="wind_speed" title="Wind Speed" opt1="km/h" opt2="mph" opt1_id="kmh" opt2_id="mph"/>
 					<HeaderSettings selected={precipitation} id="precipitation" title="Precipitation" opt1="Milimeters (mm)" opt2="Inches (in)" opt1_id="mm" opt2_id="inch"/>
 				</div>
@@ -124,7 +133,7 @@ const weatherData = {
 			</div>
 			<button class="rounded-xl bg-blue-600 hover:bg-blue-900 transition-all py-2 px-5 text-xl focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-[#02012B]">Buscar</button>
 		</div>
-		<WeatherData weatherData={weatherData}, ciudad={ciudad}/>
+		<WeatherData weatherData={weatherData}, ciudad={ciudad} wind_speed={wind_speed} precipitation={precipitation}/>
 	</main>
 </Layout>
 
@@ -148,10 +157,8 @@ const weatherData = {
     });
 
 
-
-
+	//- Opciones del dropdown -//
 	const radiosUnidades = document.querySelectorAll('.header_setting');
-
     // Añadimos los eventos
     radiosUnidades.forEach(radio => {
         radio.addEventListener('change', (event) => {
@@ -168,4 +175,26 @@ const weatherData = {
             window.location.href = url.toString();
         });
     });
+
+
+	//- Switch button
+	const switchButton = document.getElementById('switch-preset-btn')
+	switchButton?.addEventListener('click', () => {
+		sessionStorage.setItem('mantenerMenuAbierto', 'true');
+		const url = new URL(window.location.href);
+
+		//Pone los valores
+		if (switchButton.classList.contains('imperial')) {
+			url.searchParams.set("temp", "celsius");
+			url.searchParams.set("wind_speed", "kmh");
+			url.searchParams.set("precipitation", "mm");
+		} else {
+			url.searchParams.set("temp", "fahrenheit");
+			url.searchParams.set("wind_speed", "mph");
+			url.searchParams.set("precipitation", "inch");
+		}
+
+		//Recarga
+		window.location.href = url.toString();
+	})
 </script>

@@ -3,7 +3,7 @@ import InfoCard from '../components/InfoCard.astro';
 import DailyCard from '../components/DailyCard.astro';
 import HourlyCard from '../components/HourlyCard.astro';
 
-const { weatherData, ciudad } = Astro.props
+const { weatherData, ciudad, wind_speed, precipitation } = Astro.props
 
 //Dia de la semana
 const fechaActual = weatherData.current.time;
@@ -106,8 +106,8 @@ function obtenerTiempo(weather_code: number): string {
     <div class="grid grid-cols-2 sm:flex sm:flex-row gap-5 w-full" style="grid-area: middle_info;">
         <InfoCard title="Sensación Termica" value={`${weatherData.current.apparent_temperature}º`}/>
         <InfoCard title="Humedad" value={`${weatherData.current.relative_humidity_2m}%`}/>
-        <InfoCard title="Viento" value={`${weatherData.current.wind_speed_10m} km/h`}/>
-        <InfoCard title="Precipitación" value={`${weatherData.current.precipitation}mm`}/>
+        <InfoCard title="Viento" value={`${weatherData.current.wind_speed_10m} ${wind_speed == "kmh" ? "km/h" : "mph"}`}/>
+        <InfoCard title="Precipitación" value={`${weatherData.current.precipitation} ${precipitation == "mm" ? "mm" : "in"}`}/>
     </div>
     <div class="flex flex-col gap-4" style="grid-area: daily_forecast;">
         <h2 class="text-2xl">Pronóstico diario</h2>
