@@ -1,0 +1,18 @@
+---
+interface Props {
+    day: string,
+    min: string,
+    max: string,
+    type: string,
+}
+const { day, min, max, type } = Astro.props
+---
+
+<div class="flex flex-col w-full h-full p-2 gap-5 bg-neutral-600/50 border border-neutral-600 rounded-xl">
+    <h2 class="text-neutral-300 text-2xl text-center">{day}</h2>
+    <img src={`/images/icon-${type}.webp`} class="w-20 mx-auto">
+    <div class="flex flex-row">
+        <h3 class="text-xl">{max}</h3>
+        <h3 class="text-xl ml-auto">{min}</h3>
+    </div>
+</div>

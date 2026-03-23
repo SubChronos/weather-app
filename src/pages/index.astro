@@ -1,9 +1,287 @@
 ---
 import Layout from '../layouts/Layout.astro';
----
+import InfoCard from '../components/InfoCard.astro';
+import DailyCard from '../components/DailyCard.astro';
+import HourlyCard from '../components/HourlyCard.astro';
 
+import { fetchWeatherApi } from "openmeteo";
+
+async function getCoordinates(cityName: string) {
+    // API de búsqueda de Open-Meteo
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=es&format=json`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    // Comprobamos si encontró la ciudad
+    if (!data.results || data.results.length === 0) {
+        throw new Error("Ciudad no encontrada");
+    }
+
+    // Devolvemos el primer resultado
+    const city = data.results[0];
+    return {
+        name: city.name,
+        country: city.country,
+        latitude: city.latitude,
+        longitude: city.longitude
+    };
+}
+
+const ciudad = await getCoordinates("Brunete")
+
+const params = {
+	latitude: ciudad.latitude,
+	longitude: ciudad.longitude,
+	daily: ["temperature_2m_max", "temperature_2m_min", "weather_code"],
+	hourly: ["temperature_2m", "weather_code"],
+	current: ["temperature_2m", "apparent_temperature", "precipitation", "weather_code", "relative_humidity_2m", "wind_speed_10m"],
+};
+const url = "https://api.open-meteo.com/v1/forecast";
+const responses = await fetchWeatherApi(url, params);
+
+// Process first location. Add a for-loop for multiple locations or weather models
+const response = responses[0];
+
+// Attributes for timezone and location
+const latitude = response.latitude();
+const longitude = response.longitude();
+const elevation = response.elevation();
+const utcOffsetSeconds = response.utcOffsetSeconds();
+
+const current = response.current()!;
+const hourly = response.hourly()!;
+const daily = response.daily()!;
+
+// Note: The order of weather variables in the URL query and the indices below need to match!
+const weatherData = {
+	current: {
+		time: new Date((Number(current.time()) + utcOffsetSeconds) * 1000),
+		temperature_2m: Math.round(current.variables(0)!.value()),
+		apparent_temperature: Math.round(current.variables(1)!.value()),
+		precipitation: current.variables(2)!.value(),
+		weather_code: current.variables(3)!.value(),
+		relative_humidity_2m: current.variables(4)!.value(),
+		wind_speed_10m: Math.round(current.variables(5)!.value()),
+	},
+	hourly: {
+		time: Array.from(
+			{ length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval() }, 
+			(_ , i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
+		),
+		temperature_2m: hourly.variables(0)!.valuesArray(),
+		weather_code: hourly.variables(1)!.valuesArray(),
+	},
+	daily: {
+		time: Array.from(
+			{ length: (Number(daily.timeEnd()) - Number(daily.time())) / daily.interval() }, 
+			(_ , i) => new Date((Number(daily.time()) + i * daily.interval() + utcOffsetSeconds) * 1000)
+		),
+		temperature_2m_max: daily.variables(0)!.valuesArray(),
+		temperature_2m_min: daily.variables(1)!.valuesArray(),
+		weather_code: daily.variables(2)!.valuesArray(),
+	},
+};
+
+//Dia de la semana
+const fechaActual = weatherData.current.time;
+const diaLargo = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(fechaActual);
+
+//Mes y dia numerico
+const diaNumero = fechaActual.getDate(); // Devuelve 23
+const mesCorto = new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(fechaActual); // Devuelve "Mar"
+const fechaFormateada = `${diaNumero} ${mesCorto}`; 
+
+//año
+const year = fechaActual.getFullYear();
+
+//Hourly
+const tiempoActual = weatherData.current.time.getTime();
+
+// Busca en el array la hora
+let indiceInicio = weatherData.hourly.time.findIndex(
+	(hora) => new Date(hora).getTime() >= tiempoActual
+);
+
+
+// 3. Por si hay algún error y no lo encuentra, nos aseguramos de que no sea -1
+if (indiceInicio === -1) indiceInicio = 0;
+
+// 4. Cortamos solo las próximas 6 horas a partir de ese índice
+const proximasHoras = weatherData.hourly.time.slice(indiceInicio, indiceInicio + 7);
+
+function obtenerTiempo(weather_code: number): string {
+    switch(weather_code) {
+        // Despejado o mayormente despejado
+        case 0:
+        case 1:
+            return "sunny";
+            
+        // Parcialmente nublado
+        case 2:
+            return "partly-cloudy";
+            
+        // Nublado / Cubierto
+        case 3:
+            return "overcast";
+            
+        // Niebla
+        case 45:
+        case 48:
+            return "fog";
+            
+        // Llovizna (Drizzle)
+        case 51:
+        case 53:
+        case 55:
+        case 56:
+        case 57:
+            return "drizzle";
+            
+        // Lluvia y chubascos
+        case 61:
+        case 63:
+        case 65:
+        case 66:
+        case 67:
+        case 80:
+        case 81:
+        case 82:
+            return "rain";
+            
+        // Nieve y granizo
+        case 71:
+        case 73:
+        case 75:
+        case 77:
+        case 85:
+        case 86:
+            return "snow";
+            
+        // Tormenta eléctrica
+        case 95:
+        case 96:
+        case 99:
+            return "storm";
+            
+        // Valor por defecto por si llega un código inesperado
+        default:
+			return "sunny";
+		}
+	}
+	
+---
 <Layout title="Weather app">
-	<main class="w-full h-full bg-blue-950">
-		hola
+	<main class="w-full h-fit justify-center max-w-340 mx-auto pb-10">
+		<header class="flex flex-row w-full py-15 px-10">
+			<img src="/images/logo.svg">
+			<button class="ml-auto bg-neutral-600/50 border border-neutral-600 rounded-xl py-2 px-5 flex flex-row gap-3">
+				<img src="/images/icon-units.svg" class="w-5">
+				Units
+				<img src="/images/icon-dropdown.svg" class="w-3">
+			</button>
+		</header>
+		<h1 class="text-5xl text-center font-bold font-header text-balance">How's the sky looking today?</h1>
+		<div class="flex flex-row justify-center mt-12 gap-5">
+			<div class="bg-neutral-600/50 rounded-xl w-3/5 sm:w-120 flex flex-row py-2 px-4 gap-2 h-12">
+				<img src="/images/icon-search.svg" class="w-5">
+				<input class=" text-neutral-50 w-full text-xl" placeholder="Search for a place...">
+			</div>
+			<button class="rounded-xl bg-blue-600 py-2 px-5 text-xl">Search</button>
+		</div>
+		<section class="main_container w-full mt-10 px-10">
+			<div class="flex flex-col text-center sm:text-left sm:flex-row py-20 px-5 bg-no-repeat bg-cover bg-center rounded-2xl bg-[url('/images/bg-today-small.svg')] sm:bg-[url('/images/bg-today-large.svg')]" style="grid-area: banner;">
+				<div class="my-auto flex flex-col gap-3">
+					<h1 class="text-4xl font-bold">{ciudad.name}, {ciudad.country}</h1>
+					<h2 class="text-2xl text-neutral-300">{diaLargo}, {fechaFormateada}, {year}</h2>
+				</div>
+				<div class="flex flex-row mx-auto sm:ml-auto sm:mr-0">
+					<img src={`/images/icon-${obtenerTiempo(weatherData.current.weather_code)}.webp`} class="w-30 my-auto">
+					<h1 class="text-8xl my-auto mx-5">{weatherData.current.apparent_temperature}º</h1>
+				</div>
+			</div>
+			<div class="grid grid-cols-2 sm:flex sm:flex-row gap-5 w-full" style="grid-area: middle_info;">
+				<InfoCard title="Sensación Termica" value={`${weatherData.current.apparent_temperature}º`}/>
+				<InfoCard title="Humedad" value={`${weatherData.current.relative_humidity_2m}%`}/>
+				<InfoCard title="Viento" value={`${weatherData.current.wind_speed_10m} km/h`}/>
+				<InfoCard title="Precipitación" value={`${weatherData.current.precipitation}mm`}/>
+			</div>
+			<div class="flex flex-col gap-4" style="grid-area: daily_forecast;">
+				<h2 class="text-2xl">Pronóstico diario</h2>
+				<div class="w-full grid grid-cols-3 sm:flex sm:flex-row gap-5">
+					{
+						weatherData.daily.time.map((fecha, index) => {
+							const nombreDia = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(new Date(fecha));
+							const maxTemp = Math.round(Number(weatherData.daily.temperature_2m_max?.[index] ?? 0));
+							const minTemp = Math.round(Number(weatherData.daily.temperature_2m_min?.[index] ?? 0));
+							const tipoClima = obtenerTiempo(Number(weatherData.daily.weather_code?.[index] ?? 0));
+
+							return (
+								<DailyCard 
+									day={nombreDia} 
+									max={`${maxTemp}º`} 
+									min={`${minTemp}º`} 
+									type={tipoClima} 
+								/>
+							);
+						})
+					}
+				</div>
+			</div>
+			<aside class="bg-neutral-600/50 rounded-2xl flex flex-col gap-5 p-5 h-full" style="grid-area: aside;">
+				<div class="flex flex-row">
+					<h1 class="text-xl">Pronóstico horario</h1>
+					<button class="ml-auto bg-neutral-500/50 rounded-xl py-2 px-5 flex flex-row gap-3">
+						<span class="my-auto">Tuesday</span>
+						<img src="/images/icon-dropdown.svg" class="w-3">
+					</button>
+				</div>
+					{
+						proximasHoras.map((horaIso, index) => {
+			
+						// Formatea la hora: "3 PM", "4 PM", etc.
+						const horaFormateada = new Intl.DateTimeFormat('en-EU', { 
+							hour: 'numeric', 
+							hour12: true 
+						}).format(new Date(horaIso));
+
+						// Temperatura usando el index protegido
+						const temp = Math.round(Number(weatherData.hourly.temperature_2m?.[index] ?? 0));
+						
+						// Tipo de clima para el icono
+						const tipoClima = obtenerTiempo(Number(weatherData.hourly.weather_code?.[index] ?? 0));
+
+						return (
+						<HourlyCard 
+							type={tipoClima} 
+							hour={horaFormateada} 
+							temp={`${temp}º`} 
+						/>
+					);
+				})}
+			</aside>
+		</section>
 	</main>
 </Layout>
+
+<style>
+	.main_container {
+		display: grid;
+		gap: 40px;
+		
+		grid-template-areas: 
+			"banner aside"
+			"middle_info aside"
+			"daily_forecast aside";
+	}
+
+	@media (max-width: 1024px) {
+		.main_container {
+			grid-template-areas: 
+				"banner"
+				"middle_info"
+				"daily_forecast"
+				"aside";
+		}
+	}
+</style>

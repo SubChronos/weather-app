@@ -1,0 +1,16 @@
+---
+interface Props {
+    type: string,
+    hour: string,
+    temp: string,
+}
+const { type, hour, temp } = Astro.props
+---
+
+<div class="flex flex-row w-full px-5 py-3 gap-5 bg-neutral-600/30 border border-neutral-600 rounded-xl">
+    <div class="flex flex-row">
+        <img src={`/images/icon-${type}.webp`} class="w-10 my-auto">
+        <h3 class="text-xl my-auto">{hour}</h3>
+    </div>
+    <h3 class="text-xl ml-auto my-auto text-neutral-300">{temp}</h3>
+</div>
