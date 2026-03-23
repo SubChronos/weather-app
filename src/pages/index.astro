@@ -5,6 +5,10 @@ import HeaderSettings from '../components/HeaderSettings.astro';
 
 import { fetchWeatherApi } from "openmeteo";
 
+const temp = Astro.url.searchParams.get('temp') || 'celsius';
+const wind_speed = Astro.url.searchParams.get('wind_speed') || 'kmh';
+const precipitation = Astro.url.searchParams.get('precipitation') || 'mm';
+
 async function getCoordinates(cityName: string) {
     // API de búsqueda de Open-Meteo
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=es&format=json`;
@@ -99,10 +103,17 @@ const weatherData = {
 					<button class="w-56 m-2 text-left px-4 py-3 text-lg rounded-xl text-white hover:bg-neutral-600/50">
 						Switch to Imperial
 					</button>
-					<HeaderSettings title="Temperature" opt1="Celsius (ºC)" opt2="Fahrenheit (ºF)" opt1_id="celsius" opt2_id="farenheit"/>
-					<HeaderSettings title="Wind Speed" opt1="km/h" opt2="mph" opt1_id="kmh" opt2_id="mph"/>
-					<HeaderSettings title="Precipitation" opt1="Milimeters (mm)" opt2="Inches (in)" opt1_id="mm" opt2_id="inch"/>
+					<HeaderSettings selected={temp} id="temp" title="Temperature" opt1="Celsius (ºC)" opt2="Fahrenheit (ºF)" opt1_id="celsius" opt2_id="farenheit"/>
+					<HeaderSettings selected={wind_speed} id="wind_speed" title="Wind Speed" opt1="km/h" opt2="mph" opt1_id="kmh" opt2_id="mph"/>
+					<HeaderSettings selected={precipitation} id="precipitation" title="Precipitation" opt1="Milimeters (mm)" opt2="Inches (in)" opt1_id="mm" opt2_id="inch"/>
 				</div>
+				<script is:inline>
+					const menu = document.getElementById('dropdown-menu');
+					if (sessionStorage.getItem('mantenerMenuAbierto') === 'true' && menu) {
+						menu.classList.remove('hidden');
+						sessionStorage.removeItem('mantenerMenuAbierto');
+					}
+				</script>
 			</div>
 		</header>
 		<h1 class="text-5xl text-center font-bold font-header text-balance">¿Qué tal está el cielo hoy?</h1>
@@ -118,6 +129,7 @@ const weatherData = {
 </Layout>
 
 <script>
+	//- Dropdown logic -//
     const btn = document.getElementById('units-btn');
     const menu = document.getElementById('dropdown-menu');
 
@@ -133,5 +145,27 @@ const weatherData = {
         if (!btn?.contains(target) && !menu?.contains(target)) {
             menu?.classList.add('hidden');
         }
+    });
+
+
+
+
+	const radiosUnidades = document.querySelectorAll('.header_setting');
+
+    // Añadimos los eventos
+    radiosUnidades.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+			sessionStorage.setItem('mantenerMenuAbierto', 'true');
+			const target = event.target as HTMLInputElement;
+
+            // Obtenemos el valor seleccionado
+            const valorSeleccionado = (event.target as HTMLInputElement).value;
+            // Cogemos la URL actual en la que estamos
+            const url = new URL(window.location.href);
+            // Le añadimos o modificamos el parámetro GET (?unidades=...)
+            url.searchParams.set(target.name, valorSeleccionado);
+            // Redirigimos a la nueva URL (esto recargará la página)
+            window.location.href = url.toString();
+        });
     });
 </script>
