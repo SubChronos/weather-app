@@ -8,6 +8,7 @@ import { fetchWeatherApi } from "openmeteo";
 const temp = Astro.url.searchParams.get('temp') || 'celsius';
 const wind_speed = Astro.url.searchParams.get('wind_speed') || 'kmh';
 const precipitation = Astro.url.searchParams.get('precipitation') || 'mm';
+const city = Astro.url.searchParams.get('city') || 'brunete';
 
 let preset = "metric"
 if (temp != "celsius" && wind_speed != "kmh" && precipitation != "mm") {
@@ -37,67 +38,77 @@ async function getCoordinates(cityName: string) {
         longitude: city.longitude
     };
 }
-const ciudad = await getCoordinates("Brunete")
 
-const params = {
-	latitude: ciudad.latitude,
-	longitude: ciudad.longitude,
-	daily: ["temperature_2m_max", "temperature_2m_min", "weather_code"],
-	hourly: ["temperature_2m", "weather_code"],
-	current: ["temperature_2m", "apparent_temperature", "precipitation", "weather_code", "relative_humidity_2m", "wind_speed_10m"],
-	wind_speed_unit: wind_speed,
-	temperature_unit: temp,
-	precipitation_unit: precipitation,
-};
-const url = "https://api.open-meteo.com/v1/forecast";
-const responses = await fetchWeatherApi(url, params);
+let foundCity = false
+let ciudad
+let weatherData
 
-// Process first location. Add a for-loop for multiple locations or weather models
-const response = responses[0];
+try {
+	ciudad = await getCoordinates(city)
+	const params = {
+		latitude: ciudad.latitude,
+		longitude: ciudad.longitude,
+		daily: ["temperature_2m_max", "temperature_2m_min", "weather_code"],
+		hourly: ["temperature_2m", "weather_code"],
+		current: ["temperature_2m", "apparent_temperature", "precipitation", "weather_code", "relative_humidity_2m", "wind_speed_10m"],
+		wind_speed_unit: wind_speed,
+		temperature_unit: temp,
+		precipitation_unit: precipitation,
+	};
+	const url = "https://api.open-meteo.com/v1/forecast";
+	const responses = await fetchWeatherApi(url, params);
 
-// Attributes for timezone and location
-const latitude = response.latitude();
-const longitude = response.longitude();
-const elevation = response.elevation();
-const utcOffsetSeconds = response.utcOffsetSeconds();
+	// Process first location. Add a for-loop for multiple locations or weather models
+	const response = responses[0];
 
-const current = response.current()!;
-const hourly = response.hourly()!;
-const daily = response.daily()!;
+	// Attributes for timezone and location
+	const latitude = response.latitude();
+	const longitude = response.longitude();
+	const elevation = response.elevation();
+	const utcOffsetSeconds = response.utcOffsetSeconds();
 
-// Note: The order of weather variables in the URL query and the indices below need to match!
-const weatherData = {
-	current: {
-		time: new Date((Number(current.time()) + utcOffsetSeconds) * 1000),
-		temperature_2m: Math.round(current.variables(0)!.value()),
-		apparent_temperature: Math.round(current.variables(1)!.value()),
-		precipitation: current.variables(2)!.value(),
-		weather_code: current.variables(3)!.value(),
-		relative_humidity_2m: current.variables(4)!.value(),
-		wind_speed_10m: Math.round(current.variables(5)!.value()),
-	},
-	hourly: {
-		time: Array.from(
-			{ length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval() }, 
-			(_ , i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
-		),
-		temperature_2m: hourly.variables(0)!.valuesArray(),
-		weather_code: hourly.variables(1)!.valuesArray(),
-	},
-	daily: {
-		time: Array.from(
-			{ length: (Number(daily.timeEnd()) - Number(daily.time())) / daily.interval() }, 
-			(_ , i) => new Date((Number(daily.time()) + i * daily.interval() + utcOffsetSeconds) * 1000)
-		),
-		temperature_2m_max: daily.variables(0)!.valuesArray(),
-		temperature_2m_min: daily.variables(1)!.valuesArray(),
-		weather_code: daily.variables(2)!.valuesArray(),
-	},
-};
-	
+	const current = response.current()!;
+	const hourly = response.hourly()!;
+	const daily = response.daily()!;
+
+	// Note: The order of weather variables in the URL query and the indices below need to match!
+	weatherData = {
+		current: {
+			time: new Date((Number(current.time()) + utcOffsetSeconds) * 1000),
+			temperature_2m: Math.round(current.variables(0)!.value()),
+			apparent_temperature: Math.round(current.variables(1)!.value()),
+			precipitation: current.variables(2)!.value(),
+			weather_code: current.variables(3)!.value(),
+			relative_humidity_2m: current.variables(4)!.value(),
+			wind_speed_10m: Math.round(current.variables(5)!.value()),
+		},
+		hourly: {
+			time: Array.from(
+				{ length: (Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval() }, 
+				(_ , i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
+			),
+			temperature_2m: hourly.variables(0)!.valuesArray(),
+			weather_code: hourly.variables(1)!.valuesArray(),
+		},
+		daily: {
+			time: Array.from(
+				{ length: (Number(daily.timeEnd()) - Number(daily.time())) / daily.interval() }, 
+				(_ , i) => new Date((Number(daily.time()) + i * daily.interval() + utcOffsetSeconds) * 1000)
+			),
+			temperature_2m_max: daily.variables(0)!.valuesArray(),
+			temperature_2m_min: daily.variables(1)!.valuesArray(),
+			weather_code: daily.variables(2)!.valuesArray(),
+		},
+	};
+
+	foundCity = true
+} catch (e) {
+	foundCity = false
+}
+
 ---
 <Layout title="Weather app">
-	<main class="w-full h-fit justify-center max-w-340 mx-auto pb-10">
+	<main class="h-fit justify-center max-w-340 mx-auto pb-10">
 		<header class="flex flex-row w-full pt-5 pb-10 sm:py-15 px-4 sm:px-10">
 			<img src="/images/logo.svg" class="w-35 sm:w-60">
 			<div class="relative inline-block text-left ml-auto">
@@ -125,15 +136,21 @@ const weatherData = {
 				</script>
 			</div>
 		</header>
-		<h1 class="text-5xl text-center font-bold font-header text-balance">¿Qué tal está el cielo hoy?</h1>
+		<h1 class="text-5xl text-center font-bold font-header text-balance mx-8">¿Qué tal está el cielo hoy?</h1>
 		<div class="flex flex-row justify-center mt-12 gap-5">
 			<div class="bg-neutral-600/50 rounded-xl w-3/5 sm:w-120 flex flex-row py-2 px-4 gap-2 h-12 focus-within:ring-2 focus-within:ring-white focus-within:ring-offset-2 focus-within:ring-offset-[#02012B] transition-shadow">
 				<img src="/images/icon-search.svg" class="w-5">
-				<input class=" text-neutral-50 w-full text-xl focus:outline-none" placeholder="Busca un lugar...">
+				<input id="search_input" class=" text-neutral-50 w-full text-xl focus:outline-none" placeholder="Busca un lugar...">
 			</div>
-			<button class="rounded-xl bg-blue-600 hover:bg-blue-900 transition-all py-2 px-5 text-xl focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-[#02012B]">Buscar</button>
+			<button id="search_button" class="rounded-xl bg-blue-600 hover:bg-blue-900 transition-all py-2 px-5 text-xl focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-[#02012B]">Buscar</button>
 		</div>
-		<WeatherData weatherData={weatherData}, ciudad={ciudad} wind_speed={wind_speed} precipitation={precipitation}/>
+		{
+			foundCity ? 
+				<WeatherData weatherData={weatherData} ciudad={ciudad} wind_speed={wind_speed} precipitation={precipitation}/>
+					: 
+				<h1 class="text-3xl mt-20 font-semibold text-center">No se ha encontrado la ciudad</h1>
+		}
+		
 	</main>
 </Layout>
 
@@ -193,6 +210,19 @@ const weatherData = {
 			url.searchParams.set("wind_speed", "mph");
 			url.searchParams.set("precipitation", "inch");
 		}
+
+		//Recarga
+		window.location.href = url.toString();
+	})
+
+
+	//- Search
+	const searchButton = document.getElementById("search_button") as HTMLButtonElement;
+	const searchInput = document.getElementById("search_input") as HTMLInputElement;
+	searchButton?.addEventListener('click', () => {
+		const url = new URL(window.location.href);
+
+		url.searchParams.set("city", searchInput.value);
 
 		//Recarga
 		window.location.href = url.toString();
