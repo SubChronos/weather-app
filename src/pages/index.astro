@@ -108,18 +108,18 @@ try {
 
 ---
 <Layout title="Weather app">
-	<main class="h-fit justify-center max-w-340 mx-auto pb-10">
-		<header class="flex flex-row w-full pt-5 pb-10 sm:py-15 px-4 sm:px-10">
+	<main class="max-w-340 mx-auto h-fit justify-center pb-10">
+		<header class="sm:py-15 flex w-full flex-row px-4 pb-10 pt-5 sm:px-10">
 			<img src="/images/logo.svg" class="w-35 sm:w-60">
-			<div class="relative inline-block text-left ml-auto">
-				<button id="units-btn" class="bg-neutral-600/50 border border-neutral-600 rounded-xl py-2 px-5 flex flex-row gap-3 focus-within:ring-2 focus-within:ring-white focus-within:ring-offset-2 focus-within:ring-offset-[#02012B] transition-shadow">
+			<div class="relative ml-auto inline-block text-left">
+				<button id="units-btn" class="flex flex-row gap-3 rounded-xl border border-neutral-600 bg-neutral-600/50 px-5 py-2 transition-shadow focus-within:ring-2 focus-within:ring-white focus-within:ring-offset-2 focus-within:ring-offset-[#02012B]">
 					<img src="/images/icon-units.svg" class="w-4">
 					Unidades
 					<img src="/images/icon-dropdown.svg" class="w-3">
 				</button>
 
 				<!-- MENU DE UNIDADES -->
-				<div id="dropdown-menu" class="hidden w-60 absolute right-0 mt-2 rounded-xl bg-neutral-800 shadow-lg border border-neutral-600 z-10 overflow-hidden">
+				<div id="dropdown-menu" class="absolute right-0 z-10 mt-2 hidden w-60 overflow-hidden rounded-xl border border-neutral-600 bg-neutral-800 shadow-lg">
 					<button id="switch-preset-btn" class={`w-56 m-2 text-left px-4 py-3 text-lg rounded-xl text-white hover:bg-neutral-600/50 ${preset}`}>
 						{preset === "metric" ? "Switch to Imperial" : "Switch to Metric"}
 					</button>
@@ -136,19 +136,19 @@ try {
 				</script>
 			</div>
 		</header>
-		<h1 class="text-5xl text-center font-bold font-header text-balance mx-8">¿Qué tal está el cielo hoy?</h1>
-		<div class="flex flex-row justify-center mt-12 gap-5">
-			<div class="bg-neutral-600/50 rounded-xl w-3/5 sm:w-120 flex flex-row py-2 px-4 gap-2 h-12 focus-within:ring-2 focus-within:ring-white focus-within:ring-offset-2 focus-within:ring-offset-[#02012B] transition-shadow">
+		<h1 class="font-header mx-8 text-balance text-center text-5xl font-bold">¿Qué tal está el cielo hoy?</h1>
+		<div class="mt-12 flex flex-row justify-center gap-5">
+			<div class="sm:w-120 flex h-12 w-3/5 flex-row gap-2 rounded-xl bg-neutral-600/50 px-4 py-2 transition-shadow focus-within:ring-2 focus-within:ring-white focus-within:ring-offset-2 focus-within:ring-offset-[#02012B]">
 				<img src="/images/icon-search.svg" class="w-5">
-				<input id="search_input" class=" text-neutral-50 w-full text-xl focus:outline-none" placeholder="Busca un lugar...">
+				<input id="search_input" class=" w-full text-xl text-neutral-50 focus:outline-none" placeholder="Busca un lugar...">
 			</div>
-			<button id="search_button" class="rounded-xl bg-blue-600 hover:bg-blue-900 transition-all py-2 px-5 text-xl focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-[#02012B]">Buscar</button>
+			<button id="search_button" class="rounded-xl bg-blue-600 px-5 py-2 text-xl transition-all hover:bg-blue-900 focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 focus:ring-offset-[#02012B]">Buscar</button>
 		</div>
 		{
 			foundCity ? 
 				<WeatherData weatherData={weatherData} ciudad={ciudad} wind_speed={wind_speed} precipitation={precipitation}/>
 					: 
-				<h1 class="text-3xl mt-20 font-semibold text-center">No se ha encontrado la ciudad</h1>
+				<h1 class="mt-20 text-center text-3xl font-semibold">No se ha encontrado la ciudad</h1>
 		}
 		
 	</main>
