@@ -30,7 +30,7 @@ let indiceInicio = weatherData.hourly.time.findIndex(
 if (indiceInicio === -1) indiceInicio = 0;
 
 // 4. Cortamos solo las próximas 6 horas a partir de ese índice
-const proximasHoras = weatherData.hourly.time.slice(indiceInicio, indiceInicio + 8);
+const proximasHoras = weatherData.hourly.time.slice(indiceInicio, indiceInicio + 24);
 
 function obtenerTiempo(weather_code: number): string {
     switch(weather_code) {
@@ -131,7 +131,7 @@ function obtenerTiempo(weather_code: number): string {
             }
         </div>
     </div>
-    <aside class="bg-neutral-600/50 rounded-2xl flex flex-col gap-5 p-5 h-full" style="grid-area: aside;">
+    <aside class="bg-neutral-600/50 rounded-2xl flex flex-col gap-5 p-5 h-200" style="grid-area: aside;">
         <div class="flex flex-row">
             <h1 class="text-xl">Pronóstico horario</h1>
             <button class="ml-auto bg-neutral-500/50 rounded-xl py-2 px-5 flex flex-row gap-3">
@@ -139,13 +139,13 @@ function obtenerTiempo(weather_code: number): string {
                 <img src="/images/icon-dropdown.svg" class="w-3">
             </button>
         </div>
+        <div class="flex flex-col gap-5 overflow-y-scroll hourlySection">
             {
                 proximasHoras.map((horaIso:Date, index:number) => {
-    
                 // Formatea la hora: "3 PM", "4 PM", etc.
                 const horaFormateada = new Intl.DateTimeFormat('en-EU', { 
                     hour: 'numeric', 
-                    hour12: true 
+                    hour12: false 
                 }).format(new Date(horaIso));
 
                 // Temperatura usando el index protegido
@@ -155,13 +155,14 @@ function obtenerTiempo(weather_code: number): string {
                 const tipoClima = obtenerTiempo(Number(weatherData.hourly.weather_code?.[index] ?? 0));
 
                 return (
-                <HourlyCard 
-                    type={tipoClima} 
-                    hour={horaFormateada} 
-                    temp={`${temp}º`} 
-                />
-            );
-        })}
+                    <HourlyCard 
+                        type={tipoClima} 
+                        hour={horaFormateada} 
+                        temp={`${temp}º`} 
+                    />
+                );
+            })}
+        </div>
     </aside>
 </section>
 
@@ -185,4 +186,29 @@ function obtenerTiempo(weather_code: number): string {
 				"aside";
 		}
 	}
+
+
+    /* Scroll */
+    .hourlySection {
+        /* ESTÁNDAR PARA FIREFOX */
+        scrollbar-width: thin; /* Opciones: auto, thin, none */
+        scrollbar-color: #888 #ffffff00; /* Color del thumb (la barra) y color del track (el fondo) */
+    }
+
+    /* ESTILOS PARA CHROME, EDGE Y SAFARI (WebKit) */
+    .hourlySection::-webkit-scrollbar {
+        width: 10px; /* Ancho para el scroll vertical */
+        height: 10px; /* Alto para el scroll horizontal, si lo hubiera */
+    }
+    .hourlySection::-webkit-scrollbar-track {
+        background: #ffffff00; 
+        border-radius: 5px; /* Bordes redondeados */
+    }
+    .hourlySection::-webkit-scrollbar-thumb {
+        background: #888; 
+        border-radius: 5px;
+    }
+    .hourlySection::-webkit-scrollbar-thumb:hover {
+        background: #555; 
+    }
 </style>
